@@ -1,7 +1,6 @@
 import sys, pygame, random
 import numpy as np
-#from pygame.constants import CONTROLLERAXISMOTION
-
+#import pygame.freetype
 
 colors = pygame.color.THECOLORS
 black = 0, 0, 0
@@ -14,12 +13,14 @@ darkRed = (120, 0, 0)
 class Brick(pygame.sprite.Sprite):
   width = 80
   height = 30
-  color = colors["blue2"]
   def __init__(self, row, col):
     # Call the parent's constructor
     super().__init__()
+    topColor = colors["brown3"]
+    bottomColor = colors["orange"]
     self.image = pygame.Surface([Brick.width, Brick.height])
-    self.image.fill(Brick.color)
+#    self.image.fill(Brick.color)
+    self.image.fill(fadeColor(topColor, bottomColor, row / Wall.numRows))
     self.rect = self.image.get_rect()
     self.rect.x = Brick.width * col
     self.rect.y = Wall.topGap + Brick.height * row
@@ -38,22 +39,25 @@ class Game(object):
     self.screen = pygame.display.set_mode(Game.size)
     pygame.display.set_caption('Break Out, go ahead and give it to me')
     self.clock = pygame.time.Clock()
+    self.font = pygame.font.Font(pygame.font.get_default_font(), 36)
+    self.levelThreshhold = 0.99999999999999999999999999999999999999999999999999999999999
+  #  gFont = pygame.freetype.Font("Comic Sans MS", 24)
+#    text_surface = font.render('Hello world', antialias=True, color=(255, 0, 0))
 
   def updateProgressBar(self):
     top=2
-    percent = (self.totalBricks - len(self.bricks)) / self.totalBricks
-#    barWidth = self.paddle.rect.width * (self.totalBricks - len(self.bricks)) / self.totalBricks
+    percent = (self.totalBricks - len(self.bricks)) / (self.hitThisManyBricksForNextLevel + 1)
     barWidth = self.paddle.rect.width * percent
     progressDone = self.paddle.image.subsurface((0,top,barWidth,2))
-    progressDone.fill(fadeColor(self.paddle.color, Brick.color, percent))
+    progressDone.fill(fadeColor(self.paddle.color, colors["navy"], percent))
   
   # returns true if still alive
   def updateLives(self, delta=0):
     self.lives += delta
-    if self.lives < 1:
+    if self.lives < 1 and not self.newGameWait:
       self.newGameWait = True
       self.waitList.append([pygame.time.get_ticks() + 4*1000, 
-        lambda :self.newGame()])
+        self.newGame])
       return False
     size = 3
     pad = 4
@@ -67,10 +71,12 @@ class Game(object):
         b.fill(fadeColor(self.paddle.color, colors["gray15"], 0))
     return True
 
-
   def newGame(self):
     self.lives = Game.numLives
-    self.waitList = []
+    self.level = 1
+    self.newLevel()
+
+  def newLevel(self):
     self.allsprites = pygame.sprite.Group()
     self.bricks = pygame.sprite.Group()
     self.balls = pygame.sprite.Group()
@@ -78,11 +84,20 @@ class Game(object):
     self.paddle = Paddle()
     self.allsprites.add(self.paddle)
     self.updateLives()
+    self.waitList = []
     Wall.render()
     self.totalBricks = len(self.bricks)
+    self.hitThisManyBricksForNextLevel = self.totalBricks*self.levelThreshhold
     self.initPowerUps()
     self.addBall()
     self.newGameWait = False
+
+  def delayNewLevel(self):
+    self.level += 1
+    for b in self.balls:
+      b.fSpeed = 0.5
+    game.waitList.append([pygame.time.get_ticks() + 3 * 1000, 
+      game.newLevel])
 
   def run(self):
     self.newGame()
@@ -104,10 +119,11 @@ class Game(object):
       
 
       # Draw Everything
-      #self.screen.fill(black)
       self.screen.fill(colors["gray10"])
-      
+
       self.allsprites.draw(self.screen)
+      text_surface = self.font.render("Level " + str(self.level), True, (255, 0, 0))
+      self.screen.blit(text_surface, dest=(0,0))
       pygame.display.flip()
     pygame.quit()
     sys.exit()
@@ -130,11 +146,13 @@ class Game(object):
     for b in range(0, len(self.bricks)):
       brick=self.bricks.sprites()[b]
       r = random.random()
-      if r > 0.7:
+      if r > 0.99:
         brick.powerUps.append(PUpWiderPaddle(brick))
-      elif r > 0.6:
+      elif r > 0.985:
         brick.powerUps.append(PUpMultiBall(brick))
-        #self.bricks.sprites()[b].powerUps.append(PUpMultiBall(self.bricks.sprites()[b]))
+      elif r > 0.970:
+        brick.powerUps.append(PUpExtraLife(brick))
+
 
   
 class Paddle(pygame.sprite.Sprite):
@@ -226,7 +244,6 @@ class Ball(pygame.sprite.Sprite):
 
   def checkDeath(self):
     if self.rect.top > game.paddle.rect.bottom:
-      #TODO: lose life, maybe conditionally bounce as a power up.  bounce for now.
       if self.alive:
         #self.speed[1] = -1
         self.fSpeed = 0.5
@@ -251,11 +268,10 @@ class Ball(pygame.sprite.Sprite):
           game.powerUps.add(powerUp)
 
       self.bounce()
-#      if len(game.balls) < 3:
-#        newBall=Ball()
-#        game.allsprites.add(newBall)
-#        game.balls.add(newBall)
-      game.updateProgressBar()
+      if len(game.bricks) < int(game.totalBricks - game.hitThisManyBricksForNextLevel):
+        game.delayNewLevel()
+      else:
+        game.updateProgressBar()
 
   def hitPaddle(self):
     # Bounce if ball hits  paddle
@@ -288,8 +304,6 @@ class Wall(object):
     return Wall.topGap + Wall.numRows*Brick.height
 
 class PowerUp(pygame.sprite.Sprite):
-  #startColor=orange
-  #deadColor = darkOrange
   size = 8
   width = Brick.width/2
   height = Brick.height
@@ -353,8 +367,7 @@ class PowerUp(pygame.sprite.Sprite):
 class PUpWiderPaddle(PowerUp):
   def __init__(self, brick):
     super().__init__(brick)
-    self.startColor = colors["papayawhip"]
-    self.image.fill(self.startColor)
+#    self.image.fill(self.startColor)
   
   def getStartColor(self):
       return colors["papayawhip"]
@@ -376,10 +389,20 @@ class PUpMultiBall(PowerUp):
     game.addBall()
     for b in range(1, random.randint(PUpMultiBall.min, PUpMultiBall.max)):
       game.waitList.append([pygame.time.get_ticks() + delay*b, 
-        lambda :game.addBall()])
+        game.addBall])
 
   def getStartColor(self):
       return colors["goldenrod"]
+
+class PUpExtraLife(PowerUp):
+  def __init__(self, brick):
+    super().__init__(brick)
+  
+  def getStartColor(self):
+      return colors["cyan2"]
+
+  def activate(self):
+    game.updateLives(1)
 
 
 game=Game()
