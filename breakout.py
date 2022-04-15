@@ -55,7 +55,7 @@ class Game(object):
     self.fontHuge = pygame.font.Font(pygame.font.get_default_font(), 24)
     self.fontLarge = pygame.font.Font(pygame.font.get_default_font(), 20)
     self.font = pygame.font.Font(pygame.font.get_default_font(), 14)
-    self.fontSmall = pygame.font.Font(pygame.font.get_default_font(), 12)
+    self.fontSmall = pygame.font.Font(pygame.font.get_default_font(), 9)
     self.clock = pygame.time.Clock()
 
     self.levelThreshhold = 1
@@ -122,6 +122,7 @@ class Game(object):
     self.level += 1
     for b in self.balls:
       b.fSpeed = 0.5
+      b.alive = False
     game.waitList.add(3 * 1000, game.newLevel)
 
   def run(self):
@@ -142,6 +143,8 @@ class Game(object):
               runMode="s"
             else:
               self.waitList.addPauseDuration(pygame.time.get_ticks() - pauseStart)
+              for b in self.balls:
+                b.waitList.addPauseDuration(pygame.time.get_ticks() - pauseStart)
               runMode="r"
           
       self.showUserLevelOnClearScreen()
@@ -175,7 +178,7 @@ class Game(object):
     padding = 4
     colWidth = 120
     if font is None:
-      font = self.fontSmall
+      font = self.font
     if type(data) is str:
       self.renderText(data, dest, font, color)
     elif type(data) is dict:
@@ -226,15 +229,22 @@ class Game(object):
     ball = Ball()
     self.allsprites.add(ball)
     self.balls.add(ball)
+    return ball
+
+  def addBallRandomSpeed(self):
+    ball = self.addBall()
+    ball.fSpeed = random.random()*4 + 1
 
   def initPowerUps(self):
     for b in range(0, len(self.bricks)):
       brick=self.bricks.sprites()[b]
       r = random.random()
-      if r > 0.98:
+      if r > 0.99:
         brick.powerUps.append(PUpExtraLife(brick))
-      elif r > 0.9:
+      elif r > 0.8:
         brick.powerUps.append(PUpMultiBall(brick))
+      elif r > 0.6:
+        brick.powerUps.append(PUpSlowMo(brick))
       elif r > 0.2:
         brick.powerUps.append(PUpWiderPaddle(brick))
 
@@ -326,7 +336,8 @@ class Ball(pygame.sprite.Sprite):
     self.alive=True
     self.killTime = 0
     game.events.add("NewBall")
-    
+    self.waitList = WaitList()
+
 
   def move(self):
     self.x += self.speed[0]*self.fSpeed
@@ -373,6 +384,7 @@ class Ball(pygame.sprite.Sprite):
     deadBricks = pygame.sprite.spritecollide(self, game.bricks, True)
     if len(deadBricks) > 0:
       for brick in deadBricks:
+        game.events.add("BrickBounce")
         for powerUp in brick.powerUps:
           game.allsprites.add(powerUp)
           game.powerUps.add(powerUp)
@@ -396,9 +408,24 @@ class Ball(pygame.sprite.Sprite):
     self.checkDeath()
     self.hitTheBricks()
     self.hitPaddle()
+    self.waitList.process()
     
   def bounce(self):
     self.speed[1] = -self.speed[1]
+
+  def changeSpeed(self, delta):
+    if (self.alive):
+      speed  = self.fSpeed + delta
+#      print (datetime.datetime.now(), id(self), str(self.fSpeed), delta, speed, "alive")
+      if speed > 0.7:
+        self.fSpeed = speed
+        return True
+#    else:
+#      print (datetime.datetime.now(), id(self), str(self.fSpeed), delta, "dead")
+    return False
+
+  def delayChangeSpeed(self, delay, delta):
+    self.waitList.add(delay, lambda: self.changeSpeed(delta))
 
 
 class Wall(object):
@@ -513,7 +540,17 @@ class PUpWiderPaddle(PowerUp):
       return colors["papayawhip"]
 
   def activate(self):
+#      for b in game.balls:
+#        sDelta = -3
+#        if b.changeSpeed(sDelta):
+#          b.delayChangeSpeed(self.powerUpDuration, -sDelta)
+#        b.waitList.add(self.powerUpDuration, lambda : b.changeSpeed(-sDelta) )
+
+#      self.activateNormal()
+
+#  def activateNormal(self):
       game.paddle.changeWidth(20)
+#      game.waitList.add(self.powerUpDuration, game.paddle.changeWidth(-20))
       game.waitList.add(self.powerUpDuration, lambda :game.paddle.changeWidth(-20))
 
 class PUpMultiBall(PowerUp):
@@ -526,15 +563,13 @@ class PUpMultiBall(PowerUp):
   def activate(self):
     game.events.add("MultiBall")
     delay = 1 * 1000
-    game.addBall()
+#    game.addBall()
+    game.addBallRandomSpeed()
     for b in range(1, random.randint(PUpMultiBall.min, PUpMultiBall.max)):
-#      game.waitList.append([pygame.time.get_ticks() + delay*b, 
-#        game.addBall])
-      game.waitList.add(delay*b, game.addBall)
+      game.waitList.add(delay*b, game.addBallRandomSpeed)
 
   def getImage(self):
     self.image = pygame.image.load("img/PowerupBoxMultiBall.png")
-#    self.image = pygame.image.load("BreakoutImages/PowerupImages/PowerupBoxMultiBall.png")
     self.image = pygame.transform.scale(self.image,(PowerUp.width, PowerUp.height))
 
   def getStartColor(self):
@@ -558,6 +593,20 @@ class PUpExtraLife(PowerUp):
 
   def activate(self):
     game.updateLives(1)
+
+class PUpSlowMo(PowerUp):
+  def __init__(self, brick):
+    super().__init__(brick)
+
+  def getStartColor(self):
+      return colors["plum3"]
+
+  def activate(self):
+      for b in game.balls:
+#        sDelta = -3
+        sDelta = 0.1 - random.random()*2
+        if b.changeSpeed(sDelta):
+          b.delayChangeSpeed(self.powerUpDuration, -sDelta)
 
 
 game=Game()

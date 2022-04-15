@@ -1,5 +1,4 @@
 import sqlite3
-# import datetime
 
 class Db:
   def __init__(self):
@@ -40,6 +39,8 @@ class Db:
       cur.execute("update Games set gameEnd = dateTime('now'), levelReached=(?) " +
         "where idGame=(?)", (level, idGame))
       self.conn.commit()
+      self.userStats = None
+
 
   def getEventDict(self):
     cur = self.conn.cursor()
