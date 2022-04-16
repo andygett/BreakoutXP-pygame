@@ -1,7 +1,6 @@
 import sys, pygame, random, datetime
 import numpy as np
 import breakodb
-#import breakodb, eventlog
 
 colors = pygame.color.THECOLORS
 black = 0, 0, 0
@@ -16,24 +15,61 @@ class Brick(pygame.sprite.Sprite):
   height = 30
   def __init__(self, row, col):
     super().__init__()
-    topColor = colors["yellow"]
-    bottomColor = colors["red4"]
-#    topColor = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255) )
-#    bottomColor = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255) )
+#    topColor = colors["palegreen"]
+#    bottomColor = colors["turquoise4"]
     self.image = pygame.Surface([Brick.width, Brick.height])
 #    self.image.fill(Brick.color)
+    topColor = self.getTopColor()
+    bottomColor = self.getBottomColor()
+#    if row == 1 and col == 1:
+#      print (game.level, topColor, bottomColor)
     self.image.fill(fadeColor(bottomColor, topColor, row / Wall.numRows))
     self.rect = self.image.get_rect()
     self.rect.x = Brick.width * col
     self.rect.y = Wall.topGap + Brick.height * row
     self.powerUps=[]
 
+
+# some 4-digit prime numbers for seeding:
+# 1009 1013 1019 1021 1031 1033 1039 1049 1051 1061 1063 1069 1087 1091 1093 1097 1103 1109 1117 1123 1129 1151 1153 1163 1171 1181 1187 1193 1201 1213 1217 1223 1229 1231 1237 1249 1259 1277 1279 1283 1289 1291 1297 1301 1303 1307 1319 1321 1327 1361 1367 1373 1381 1399 1409 1423 1427 1429 1433 1439 1447 1451 1453 1459
+  def getTopColor(self):
+    varColor = (game.level * 1229) % 256
+    satCat = game.level % 6
+    if satCat == 0:
+      return 255, varColor, 0, 255
+    if satCat == 1:
+      return 0, varColor, 255, 255
+    if satCat == 2:
+      return varColor, 255, 0, 255    # green
+    if satCat == 3:
+      return varColor, 0, 255, 255
+    if satCat == 4:
+      return 255, 0, varColor, 255
+    if satCat == 5:
+      return 0, 255, varColor, 255
+
+  def getBottomColor(self):
+    varColor = (game.level * 1013) % 256
+    satCat = game.level % 6
+    if satCat == 0:
+      return 0, varColor, 128, 255
+    if satCat == 1:
+      return varColor, 128, 0, 255
+    if satCat == 2:
+      return 0, 128, varColor, 255
+    if satCat == 3:
+      return 128, varColor, 0, 255    # green
+    if satCat == 4:
+      return 128, 0, varColor, 255   # purplish
+    if satCat == 5:
+      return varColor, 0, 128, 255   # purplish
+
 class Game(object):
   numLives = 3
   fps = 120
   fSpeed = 4
   size = width, height = Brick.width * 12, 840
-  version = "1.3" 
+  version = "1.5" 
 
   def __init__(self):
     self.db = breakodb.Db()
@@ -58,7 +94,7 @@ class Game(object):
     self.fontSmall = pygame.font.Font(pygame.font.get_default_font(), 9)
     self.clock = pygame.time.Clock()
 
-    self.levelThreshhold = 1
+    self.levelThreshold = 0.98
   #  gFont = pygame.freetype.Font("Comic Sans MS", 24)
 #    text_surface = font.render('Hello world', antialias=True, color=(255, 0, 0))
 
@@ -74,7 +110,6 @@ class Game(object):
     self.lives += delta
     if self.lives < 1 and not self.newGameWait:
       self.endGame()
-      self.events.clear()
       self.idGame = 0
       self.newGameWait = True
       self.waitList.add(4*1000, self.newGame)
@@ -92,17 +127,25 @@ class Game(object):
     return True
 
   def endGame(self):
-      self.db.saveEvents(self.idGame, self.events.details)
+#      self.db.saveEvents(self.idGame, self.events.details)
+      self.endLevel()
       self.db.endGame(self.idGame, self.level)
 
   def newGame(self):
     self.events.gameCache = {}
     self.idGame = self.db.newGame(self.idSession)
     self.lives = Game.numLives
-    self.level = 1
+    self.level = 0
+#    self.level = random.randint(1, 50)
     self.newLevel()
 
   def newLevel(self):
+    self.level += 1
+    self.events.levelCache = {}
+    self.idLevel = self.db.newLevel(self.idGame, self.level)
+    self.levelPauseDuration = 0
+    self.maxBalls = 1
+
     self.allsprites = pygame.sprite.Group()
     self.bricks = pygame.sprite.Group()
     self.balls = pygame.sprite.Group()
@@ -113,38 +156,53 @@ class Game(object):
     self.waitList = WaitList()
     Wall.render()
     self.totalBricks = len(self.bricks)
-    self.hitThisManyBricksForNextLevel = self.totalBricks*self.levelThreshhold
+    self.hitThisManyBricksForNextLevel = self.totalBricks*self.levelThreshold
     self.initPowerUps()
     self.addBall()
     self.newGameWait = False
 
   def delayNewLevel(self):
-    self.level += 1
     for b in self.balls:
       b.fSpeed = 0.5
       b.alive = False
     game.waitList.add(3 * 1000, game.newLevel)
+    self.endLevel()
+
+  def endLevel(self):
+      self.db.endLevel(self.idLevel, self.maxBalls,
+          int(self.levelPauseDuration / 1000 + 0.5))
+      self.db.saveEvents(self.idLevel, self.events.details)
+      self.events.clear()
 
   def run(self):
     self.newGame()
     runMode="r"
-    pauseStart = 0
+    self.pauseStart = 0
     while runMode != "q":
       self.clock.tick(Game.fps)
       for event in pygame.event.get():
         if event.type == pygame.QUIT: 
+          if runMode=="s":
+            self.endPause()
           runMode="q"
         elif event.type == pygame.KEYDOWN:
           if event.key == pygame.K_ESCAPE:
+            if runMode=="s":
+              self.endPause()
             runMode="q"
+          if event.key == pygame.K_u:
+            #self.level += 1
+            game.newLevel()
+          if event.key == pygame.K_d:
+            self.level -= 2
+            game.newLevel()
           if event.key == pygame.K_RETURN:
             if runMode=="r":
-              pauseStart = pygame.time.get_ticks()
+              self.pauseStart = pygame.time.get_ticks()
               runMode="s"
+              game.events.add("StartPause")
             else:
-              self.waitList.addPauseDuration(pygame.time.get_ticks() - pauseStart)
-              for b in self.balls:
-                b.waitList.addPauseDuration(pygame.time.get_ticks() - pauseStart)
+              self.endPause()
               runMode="r"
           
       self.showUserLevelOnClearScreen()
@@ -154,18 +212,25 @@ class Game(object):
         self.showStats()
       pygame.display.flip()
 
-    #self.db.endGame(self.idGame, self.level)
     self.endGame()
     self.db.endSession(self.idSession)
     pygame.quit()
     sys.exit()
 
+  def endPause(self):
+    pauseDuration = pygame.time.get_ticks() - self.pauseStart
+    self.waitList.addPauseDuration(pauseDuration)
+    game.events.add("EndPause")
+    for b in self.balls:
+      b.waitList.addPauseDuration(pauseDuration)
+    self.levelPauseDuration += pauseDuration
+
   def showStats(self):
     s = "Version %s. © 2021 Stoic the Vast. All rights reserved. Any retransmission or rebroadcast of this game is strictly encouraged. Your mileage may vary. Similarities to real life are purely coincidental." % Game.version
     self.renderData(s, (4, game.height - 20), 
         colors["peachpuff3"])
-    self.renderData(game.events.gameCache, heading="Game Stats")
-    self.renderData(game.db.getUserStats(self.idUser), (200, 50), heading="User Stats")
+    self.renderData(game.events.gameCache, (275, 50), heading="Game Stats")
+    self.renderData(game.db.getUserStats(self.idUser), heading="User Stats")
 
   def showUserLevelOnClearScreen(self):
     self.screen.fill(self.bgColor)
@@ -176,7 +241,7 @@ class Game(object):
         font=None, heading=None ):
     #tRect = pygame.Rect(Game.width/4, Game.height/4, Game.width/2, Game.height/2)
     padding = 4
-    colWidth = 120
+    colWidth = 150
     if font is None:
       font = self.font
     if type(data) is str:
@@ -209,7 +274,6 @@ class Game(object):
             font, color)
         curTop += rect.bottom + padding
 
-
   def renderText(self, s, dest, font, color):
     tSurface = font.render(s, True, color, self.bgColor)
     self.screen.blit(tSurface, dest=dest)
@@ -224,11 +288,11 @@ class Game(object):
     self.allsprites.draw(self.screen)
     pygame.display.flip()
 
-    
   def addBall(self):
     ball = Ball()
     self.allsprites.add(ball)
     self.balls.add(ball)
+    self.maxBalls = max(self.maxBalls, len(self.balls))
     return ball
 
   def addBallRandomSpeed(self):
@@ -338,7 +402,6 @@ class Ball(pygame.sprite.Sprite):
     game.events.add("NewBall")
     self.waitList = WaitList()
 
-
   def move(self):
     self.x += self.speed[0]*self.fSpeed
     self.rect.x = self.x
@@ -416,12 +479,9 @@ class Ball(pygame.sprite.Sprite):
   def changeSpeed(self, delta):
     if (self.alive):
       speed  = self.fSpeed + delta
-#      print (datetime.datetime.now(), id(self), str(self.fSpeed), delta, speed, "alive")
       if speed > 0.7:
         self.fSpeed = speed
         return True
-#    else:
-#      print (datetime.datetime.now(), id(self), str(self.fSpeed), delta, "dead")
     return False
 
   def delayChangeSpeed(self, delay, delta):
@@ -447,15 +507,18 @@ class Events():
     self.evDict = evDict
     self.clear()
     self.gameCache = {}
+    self.levelCache = {}
 
   def clear(self):
     self.details=[]    
 
   def add(self, eventName):
     idEvent = self.evDict[eventName][0]
+    # characters [0:23] return current time to the second in UTC to match sqlite db time
     dbTime = datetime.datetime.now(datetime.timezone.utc).isoformat()[:23]
     self.details.append((idEvent, dbTime))
     self.gameCache[eventName] = self.gameCache.get(eventName, 0) + 1
+    self.levelCache[eventName] = self.levelCache.get(eventName, 0) + 1
 
 class PowerUp(pygame.sprite.Sprite):
 #  size = 8
@@ -540,30 +603,23 @@ class PUpWiderPaddle(PowerUp):
       return colors["papayawhip"]
 
   def activate(self):
-#      for b in game.balls:
-#        sDelta = -3
-#        if b.changeSpeed(sDelta):
-#          b.delayChangeSpeed(self.powerUpDuration, -sDelta)
-#        b.waitList.add(self.powerUpDuration, lambda : b.changeSpeed(-sDelta) )
+    game.paddle.changeWidth(20)
+    game.waitList.add(self.powerUpDuration, lambda :game.paddle.changeWidth(-20))
+    game.events.add("WiderPaddles")
 
-#      self.activateNormal()
+  def getMissedEventName(self):
+     return "WiderPaddleMissed"
 
-#  def activateNormal(self):
-      game.paddle.changeWidth(20)
-#      game.waitList.add(self.powerUpDuration, game.paddle.changeWidth(-20))
-      game.waitList.add(self.powerUpDuration, lambda :game.paddle.changeWidth(-20))
 
 class PUpMultiBall(PowerUp):
   min = 3
   max = 5
   def __init__(self, brick):
     super().__init__(brick)
-  #  self.image.fill(self.startColor)
   
   def activate(self):
     game.events.add("MultiBall")
     delay = 1 * 1000
-#    game.addBall()
     game.addBallRandomSpeed()
     for b in range(1, random.randint(PUpMultiBall.min, PUpMultiBall.max)):
       game.waitList.add(delay*b, game.addBallRandomSpeed)
@@ -585,7 +641,6 @@ class PUpExtraLife(PowerUp):
 
   def getImage(self):
     self.image = pygame.image.load("img/PowerupBox1UP.png")
-#    self.image = pygame.image.load("BreakoutImages/PowerupImages/PowerupBox1UP.png")
     self.image = pygame.transform.scale(self.image,(PowerUp.width, PowerUp.height))
 
   def getStartColor(self):
@@ -593,6 +648,10 @@ class PUpExtraLife(PowerUp):
 
   def activate(self):
     game.updateLives(1)
+    game.events.add("ExtraLives")
+
+  def getMissedEventName(self):
+     return "ExtraLiveMissed"
 
 class PUpSlowMo(PowerUp):
   def __init__(self, brick):
@@ -602,12 +661,14 @@ class PUpSlowMo(PowerUp):
       return colors["plum3"]
 
   def activate(self):
-      for b in game.balls:
-#        sDelta = -3
-        sDelta = 0.1 - random.random()*2
-        if b.changeSpeed(sDelta):
-          b.delayChangeSpeed(self.powerUpDuration, -sDelta)
+    game.events.add("SloMo")
+    for b in game.balls:
+      sDelta = 0.1 - random.random()*2
+      if b.changeSpeed(sDelta):
+        b.delayChangeSpeed(self.powerUpDuration, -sDelta)
 
+  def getMissedEventName(self):
+     return "SloMoMissed"
 
 game=Game()
 game.run()
