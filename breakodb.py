@@ -25,19 +25,21 @@ class Db:
         "idSession=(?)", (idSession, ))
       self.conn.commit()
 
-  def newGame(self, idSession):
+  def newGame(self, idSession, abnormalEndId):
     if idSession > 0:
       cur = self.conn.cursor()
-      cur.execute("insert into Games (idSession) values (?)", (idSession, ))
+      cur.execute("insert into Games (idSession, endTrigger) values (?, ?)", 
+          (idSession, abnormalEndId))
       self.conn.commit()
       return cur.lastrowid
     return 0
 
-  def endGame(self, idGame, level):
+  def endGame(self, idGame, level, endTrigger):
     if (idGame >= 0):
       cur = self.conn.cursor()
-      cur.execute("update Games set gameEnd = dateTime('now'), levelReached=(?) " +
-        "where idGame=(?)", (level, idGame))
+      cur.execute(
+        "update Games set gameEnd = dateTime('now'), levelReached=(?), endTrigger=(?) " +
+        "where idGame=(?)", (level, endTrigger, idGame))
       self.conn.commit()
       # self.userStats = None
 
@@ -90,4 +92,38 @@ GROUP BY e.idEventType;
       cur.execute(sql, (idUser,))
       self.userStats = cur.fetchall()
     return self.userStats
+
+  def getXPDict(self, idUser):
+    xp={}
+    sql="SELECT  count(s.idSession)  from sessions s "
+    where="where idUser=(?) "
+    self.xpAdd(xp, sql,where, "Sessions", idUser)
+
+    sql += "inner join games g on g.idSession = s.idSession "
+    self.xpAdd(xp, sql,where, "Games", idUser)
+
+    sql += "inner join levels on levels.idGame = g.idGame "
+    where += "and Levels.levelEnd not null "
+    self.xpAdd(xp, sql,where, "Levels", idUser)
+    return xp
+
+
+
+    cur = self.conn.cursor()
+
+    tableName="Levels"
+    s = "select count(*) from %s where idUser=(?) and levelEnd not null" % tableName
+    cur.execute(s, (idUser,))
+    xp[tableName]=int(cur.fetchall()[0][0])
+  
+  def xpAdd(self, xp, sql, where, tableName, idUser):
+    cur = self.conn.cursor()
+    s = sql + where
+    cur.execute(s, (idUser,))
+    xp[tableName]=int(cur.fetchall()[0][0])
+    
+    
+  
+    pass
+
 

@@ -3,9 +3,9 @@
     "version": "2.1.0",
     "width": 2000,
     "height": 2000,
-    "scrollTop": -94,
-    "scrollLeft": -42.5,
-    "zoomLevel": 1,
+    "scrollTop": -63,
+    "scrollLeft": 0,
+    "zoomLevel": 0.9,
     "show": {
       "tableComment": true,
       "columnComment": true,
@@ -89,13 +89,36 @@
               "widthDefault": 60
             },
             "id": "cec6b99c-0dc3-4ae1-84f8-2d454d5721b8"
+          },
+          {
+            "name": "Visible",
+            "comment": "",
+            "dataType": "BOOLEAN",
+            "default": "1",
+            "option": {
+              "autoIncrement": false,
+              "primaryKey": false,
+              "unique": false,
+              "notNull": false
+            },
+            "ui": {
+              "active": false,
+              "pk": false,
+              "fk": false,
+              "pfk": false,
+              "widthName": 60,
+              "widthComment": 60,
+              "widthDataType": 65,
+              "widthDefault": 60
+            },
+            "id": "4a556a3b-671f-4091-9f23-912fd8d72ddc"
           }
         ],
         "ui": {
-          "active": false,
-          "left": 9,
-          "top": 55,
-          "zIndex": 2,
+          "active": true,
+          "left": 574,
+          "top": 69,
+          "zIndex": 15,
           "widthName": 60,
           "widthComment": 60
         },
@@ -200,8 +223,8 @@
         ],
         "ui": {
           "active": false,
-          "left": 36.05555555555557,
-          "top": 221.27777777777766,
+          "left": 12.555555555555571,
+          "top": 70.77777777777766,
           "zIndex": 1,
           "widthName": 60,
           "widthComment": 60
@@ -303,13 +326,36 @@
               "widthDefault": 60
             },
             "id": "7cc0043a-f08e-4762-8abb-e64de76cad90"
+          },
+          {
+            "name": "idEventType",
+            "comment": "",
+            "dataType": "INTEGER",
+            "default": "",
+            "option": {
+              "autoIncrement": false,
+              "primaryKey": false,
+              "unique": false,
+              "notNull": false
+            },
+            "ui": {
+              "active": false,
+              "pk": false,
+              "fk": true,
+              "pfk": false,
+              "widthName": 74,
+              "widthComment": 60,
+              "widthDataType": 60,
+              "widthDefault": 60
+            },
+            "id": "a658afaf-cb76-402c-b980-006a730bc411"
           }
         ],
         "ui": {
           "active": false,
-          "left": 49.5,
-          "top": 575,
-          "zIndex": 6,
+          "left": 14,
+          "top": 545,
+          "zIndex": 2,
           "widthName": 60,
           "widthComment": 60
         },
@@ -391,8 +437,8 @@
         ],
         "ui": {
           "active": false,
-          "left": 372,
-          "top": 70.5,
+          "left": 18.5,
+          "top": 295,
           "zIndex": 3,
           "widthName": 70,
           "widthComment": 60
@@ -498,8 +544,8 @@
         ],
         "ui": {
           "active": false,
-          "left": 249,
-          "top": 386.5,
+          "left": 465,
+          "top": 237,
           "zIndex": 4,
           "widthName": 60,
           "widthComment": 60
@@ -674,8 +720,8 @@
         ],
         "ui": {
           "active": false,
-          "left": 568.5,
-          "top": 553,
+          "left": 519,
+          "top": 504,
           "zIndex": 5,
           "widthName": 60,
           "widthComment": 60
@@ -699,18 +745,18 @@
           "columnIds": [
             "0ea294f6-5a06-496b-aed3-73572d167a19"
           ],
-          "x": 182.5,
-          "y": 165,
-          "direction": "bottom"
+          "x": 574,
+          "y": 134.25,
+          "direction": "left"
         },
         "end": {
           "tableId": "4697aa42-6504-49db-9f72-70ef5431ba11",
           "columnIds": [
             "2996c6c4-836a-4fd8-b7a1-89670a49c1de"
           ],
-          "x": 269.05555555555554,
-          "y": 221.27777777777766,
-          "direction": "top"
+          "x": 478.55555555555554,
+          "y": 146.27777777777766,
+          "direction": "right"
         },
         "constraintName": "fk_users_to_sessions",
         "id": "3f0b5b2c-7e65-4133-a088-2c4ceb276a4e"
@@ -724,8 +770,8 @@
           "columnIds": [
             "efedfd20-1c8b-41b5-a8ec-8e1a10e9dd4d"
           ],
-          "x": 269.05555555555554,
-          "y": 372.27777777777766,
+          "x": 245.55555555555557,
+          "y": 221.77777777777766,
           "direction": "bottom"
         },
         "end": {
@@ -733,8 +779,8 @@
           "columnIds": [
             "dce118cc-ba38-4462-aa0a-961a0769689d"
           ],
-          "x": 276.5,
-          "y": 575,
+          "x": 363.5,
+          "y": 545,
           "direction": "top"
         },
         "constraintName": "fk_sessions_to_games",
@@ -749,8 +795,8 @@
           "columnIds": [
             "bb7e9de7-3f8c-4742-a256-e4cafd9b24a9"
           ],
-          "x": 503.5,
-          "y": 650.5,
+          "x": 480,
+          "y": 630.75,
           "direction": "right"
         },
         "end": {
@@ -758,8 +804,8 @@
           "columnIds": [
             "58be1e40-b446-4183-8ead-4abcdf4b9711"
           ],
-          "x": 568.5,
-          "y": 659.25,
+          "x": 519,
+          "y": 610.25,
           "direction": "left"
         },
         "constraintName": "fk_games_to_levels",
@@ -774,18 +820,18 @@
           "columnIds": [
             "c03c2bd5-f3d6-4736-a95d-6219c55eb272"
           ],
-          "x": 552.5,
-          "y": 201,
-          "direction": "bottom"
+          "x": 379.5,
+          "y": 360.25,
+          "direction": "right"
         },
         "end": {
           "tableId": "72890c28-1a02-4480-9757-a7ad84cae663",
           "columnIds": [
             "61fdde1d-5112-44a2-934d-d25ee23fa6f3"
           ],
-          "x": 482,
-          "y": 386.5,
-          "direction": "top"
+          "x": 465,
+          "y": 312.5,
+          "direction": "left"
         },
         "constraintName": "fk_eventtypes_to_events",
         "id": "246ad55e-9fcd-4d98-9ff2-0408322b38ef"
@@ -799,8 +845,8 @@
           "columnIds": [
             "59e70e01-a2fb-4e78-8032-2f235a65805c"
           ],
-          "x": 810,
-          "y": 553,
+          "x": 760.5,
+          "y": 504,
           "direction": "top"
         },
         "end": {
@@ -808,12 +854,37 @@
           "columnIds": [
             "f8efcb84-9dc2-4d70-8f87-bc6f037575c7"
           ],
-          "x": 715,
-          "y": 462,
-          "direction": "right"
+          "x": 698,
+          "y": 388,
+          "direction": "bottom"
         },
         "constraintName": "fk_levels_to_events",
         "id": "19097967-e283-43dd-8349-f5f9c4ca9a00"
+      },
+      {
+        "identification": false,
+        "relationshipType": "ZeroN",
+        "startRelationshipType": "Ring",
+        "start": {
+          "tableId": "0d3ae1d1-f407-4d2a-ac23-6573ce99f671",
+          "columnIds": [
+            "c03c2bd5-f3d6-4736-a95d-6219c55eb272"
+          ],
+          "x": 199,
+          "y": 425.5,
+          "direction": "bottom"
+        },
+        "end": {
+          "tableId": "80ca4549-d08b-4400-894c-3292b57a7116",
+          "columnIds": [
+            "a658afaf-cb76-402c-b980-006a730bc411"
+          ],
+          "x": 130.5,
+          "y": 545,
+          "direction": "top"
+        },
+        "constraintName": "fk_eventtypes_to_games",
+        "id": "d9e1677a-0de1-44e3-969f-3c81d2bbf65e"
       }
     ]
   }
