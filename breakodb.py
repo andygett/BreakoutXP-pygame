@@ -10,6 +10,22 @@ class Db:
     cur.execute("select * from Users")
     return cur.fetchall()
 
+  def getUser(self, idUser):
+    cur = self.conn.cursor()
+    cur.execute("select * from Users where idUser=(?)", (idUser, ))
+    return cur.fetchall()
+
+  def insertUser(self, userName):
+    cur = self.conn.cursor()
+    cur.execute("insert into Users (Name) values (?)", (userName, ))
+    self.conn.commit()
+    return cur.lastrowid
+
+  def getVisibleUsers(self):
+    cur = self.conn.cursor()
+    cur.execute("select * from Users WHERE Visible=1")
+    return cur.fetchall()
+
   def newSession(self, idUser):
     if idUser > 0:
       cur = self.conn.cursor()
@@ -122,8 +138,14 @@ GROUP BY e.idEventType;
     cur.execute(s, (idUser,))
     xp[tableName]=int(cur.fetchall()[0][0])
     
-    
-  
-    pass
+  def getConfigValue(self, setting):
+    cur = self.conn.cursor()
+    sql="SELECT SettingValue from Config WHERE Setting=(?)"
+    cur.execute(sql, (setting,))
+    return cur.fetchone()[0]
 
-
+  def setConfigValue(self, setting, value):
+    cur = self.conn.cursor()
+    sql="UPDATE Config SET SettingValue = (?) WHERE Setting=(?)"
+    cur.execute(sql, (value, setting))
+    self.conn.commit()
