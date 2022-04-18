@@ -3,12 +3,12 @@ import numpy as np, math
 import breakodb
 
 colors = pygame.color.THECOLORS
-black = 0, 0, 0
-white = (255, 255, 255)
-blue = (80, 80, 255)
-orange = (255, 153, 51)
-darkOrange = (102,51, 0)
-darkRed = (120, 0, 0)
+#black = 0, 0, 0
+#white = (255, 255, 255)
+#blue = (80, 80, 255)
+#orange = (255, 153, 51)
+#darkOrange = (102,51, 0)
+#darkRed = (120, 0, 0)
 
 class Brick(pygame.sprite.Sprite):
   width = 80
@@ -125,18 +125,22 @@ class Game(object):
   fps = 120
   fSpeed = 4
   size = width, height = Brick.width * 12, 840
-  version = "1.6"
+  version = "1.7"
 
-  def __init__(self):
+  def __init__(self, idUser):
     self.db = breakodb.Db()
     eventTypes = self.db.getEventDict()
-#    self.events=eventlog.Events(eventTypes)
     self.events=Events(eventTypes)
 
-    self.users=self.db.getUsers()
+    if idUser:
+      self.users=self.db.getUser(idUser)
+    else:
+      self.users=self.db.getUsers()
+
     self.userIndex = 0 
     self.idUser = self.users[self.userIndex][0]
     self.userName=self.users[self.userIndex][1]
+    
     self.idSession = self.db.newSession(self.idUser)
 
     pygame.init()
@@ -266,9 +270,16 @@ class Game(object):
     self.newGame()
     runMode="r"
     self.pauseStart = 0
+    mouseVisibleKill = 0
     while runMode != "q":
       self.clock.tick(Game.fps)
+      if pygame.time.get_ticks() > mouseVisibleKill:
+        pygame.mouse.set_visible(0)
+        mouseVisibleKill = 0
       for event in pygame.event.get():
+        if event.type == pygame.MOUSEMOTION:
+          pygame.mouse.set_visible(1)
+          mouseVisibleKill = pygame.time.get_ticks()+3*1000
         if event.type == pygame.QUIT: 
           if runMode=="s":
             self.endPause()
@@ -309,8 +320,8 @@ class Game(object):
 
     self.endGame(self.events.evDict["UserQuit"][0])
     self.db.endSession(self.idSession)
-    pygame.quit()
-    sys.exit()
+#    pygame.quit()
+#    sys.exit()
 
   def endPause(self):
     pauseDuration = pygame.time.get_ticks() - self.pauseStart
@@ -353,12 +364,10 @@ class Game(object):
       ["Frames per second", self.fps],
       ["Speed factor", self.fSpeed],
       ["Bricks needed threshold", self.levelThreshold],
-      # TODO: show powerup rates
     ]
     curTop = self.renderData(sysStats, gameSurf, curTop + 40, font=self.fontSmall)
     curTop = self.renderData(self.pupSpawnRates, gameSurf, curTop, font=self.fontSmall)
     self.screen.blit(gameSurf, (50+225,50))
-
 
   def showLevelStats(self, levelSurf):
     curTop = self.renderData(game.events.levelCache, levelSurf, 
@@ -373,7 +382,6 @@ class Game(object):
     curTop = self.renderData(levelStats, levelSurf, curTop)
     self.screen.blit(levelSurf, (50+225*2,50))
     return curTop
-    
 
   def showUserLevelOnClearScreen(self):
     self.screen.fill(self.bgColor)
@@ -441,7 +449,6 @@ class Game(object):
 
   def addBallRandomSpeed(self):
     ball = self.addBall(random.random()*4 + 1)
-    #ball.fSpeed = random.random()*4 + 1
 
   def grantLife(self):
     if self.level > 0:
@@ -452,27 +459,6 @@ class Game(object):
               lambda: PowerUps.spawn(globals()["PUpExtraLife"]))
 
     pass
-
-#  def initPowerUps(self):
-#    for b in range(0, len(self.bricks)):
-#      brick=self.bricks.sprites()[b]
-#      r = random.random()
-
-
-#      if r > 0.99:
-#        brick.powerUps.append(PUpExtraLife(brick.rect.x, brick.rect.y))
-#      elif r > 0.6:
-#        brick.powerUps.append(PUpMultiBall(brick.rect.x, brick.rect.y))
-#      elif r > 0.45:
-#        brick.powerUps.append(PUpBigBall(brick.rect.x, brick.rect.y))
-#      elif r > 0.6:
-#        brick.powerUps.append(PUpInvinciBalls(brick.rect.x, brick.rect.y))
-#      elif r > 0.5:
-#        brick.powerUps.append(PUpFireBall(brick.rect.x, brick.rect.y))
-#      elif r > 0.4:
-#        brick.powerUps.append(PUpSlowMo(brick.rect.x, brick.rect.y))
-#      elif r > 0.000000000001:
-#        brick.powerUps.append(PUpWiderPaddle(brick.rect.x, brick.rect.y))
 
 class WaitList:
   def __init__(self):
@@ -504,7 +490,6 @@ class Paddle(pygame.sprite.Sprite):
     self.height = 10
     self.color = colors["gray89"]
 
-    # pygame.rect.Rect((width/2, height - 40, self.width, 10))
     self.image = pygame.Surface([self.width, self.height])
     self.image.fill(self.color)
     self.rect = self.image.get_rect()
@@ -595,7 +580,7 @@ class Ball(pygame.sprite.Sprite):
       self.rect.bottom = Game.height
       self.y = self.rect.bottom - self.size
       self.speed[1] = 0
-      self.image.fill(darkRed)
+      self.image.fill(colors["darkred"])
 
   def checkDeath(self):
     if self.rect.top > game.paddle.rect.bottom:
@@ -604,7 +589,6 @@ class Ball(pygame.sprite.Sprite):
           self.bounce()
         else:
           game.events.add("DeadBall")
-          #self.speed[1] = -1
           self.fSpeed = 0.5
           self.killTime = pygame.time.get_ticks() + Ball.deathDelay
           self.alive=False
@@ -624,6 +608,7 @@ class Ball(pygame.sprite.Sprite):
 
     deadBricks = pygame.sprite.spritecollide(self, game.bricks, True)
     if len(deadBricks) > 0:
+      Wall.brickExplosion(deadBricks[0])
       for brick in deadBricks:
         game.events.add("BrickBounce")
         PowerUps.spawnRandom(brick.rect.x, brick.rect.y)
@@ -641,7 +626,6 @@ class Ball(pygame.sprite.Sprite):
       self.y = game.paddle.rect.top - self.size
       self.bounce()
       game.events.add("PaddleHit")
-
 
   def update(self):
     self.move()
@@ -696,6 +680,7 @@ class Ball(pygame.sprite.Sprite):
   def endBigBall(self, delta):
     self.changeSize(delta)
     self.color = Ball.color
+    self.bigBall = False
     pass
 
 class Wall(object):
@@ -708,29 +693,16 @@ class Wall(object):
   def render():
     #def typeWriter(): return delayXX + dRandom.staggerDelay 
     def typeWriter(): 
-#      return len(game.bricks) / totalBricks * Wall.targetRenderDuration + dRandom.staggerDelay 
-#      n=len(game.bricks)
-#      bDelay = (n+n%dRandom.groupSize)*Wall.targetRenderDuration/(totalBricks*dRandom.groupSize)
-#      bDelay = (n+n%dRandom.groups)*Wall.targetRenderDuration*dRandom.groupSize/totalBricks
-#      bDelay = ((n-1)//numCols)*Wall.targetRenderDuration/Wall.numRows/dRandom.groups + Wall.targetRenderDuration * ((n-1)%dRandom.groupSize)/totalBricks
-#      bDelay = row*Wall.targetRenderDuration/Wall.numRows/dRandom.groups + Wall.targetRenderDuration * ((n-1)%dRandom.groupSize)/totalBricks
-      bDelay = row*Wall.targetRenderDuration/Wall.numRows + Wall.targetRenderDuration * ((len(game.bricks)-1)%dRandom.groupSize) * dRandom.groups /totalBricks
+      bDelay = (row*Wall.targetRenderDuration/Wall.numRows 
+        + Wall.targetRenderDuration * ((len(game.bricks)-1)%dRandom.groupSize) 
+        * dRandom.groups /totalBricks)
 #      print (n, bDelay)
       return bDelay
     def reverseTypeWriter():
       return (totalBricks -len(game.bricks)) * dRandom.r*0.04 * 1000
-      #return (Wall.numRows*numCols - (row*numCols + col)) * delayIncrement
     def marchColumnsAcrossSmooth(): return col * colDelay
     def marchColumnsAcross(): return random.random() * colDelay + col * colDelay
 #    def randomFill(): return random.random() * 25 * delayIncrement 
-
-#    dRandom.stagger = random.choice((True, False))
-#    dRandom.stagger = True
-#    dRandom.staggerDelay = 0
-#    dRandom.useRow =  random.choice((0, 1))
-#    dRandom.groupSize = round(random.random()*numCols/2+2)
-    
-
 #    def randomFill(): return random.random() * dRandom.r * Wall.targetRenderDuration / totalBricks
     def randomFill(): return random.random() * Wall.targetRenderDuration / totalBricks
     def marchDownSmooth(): return row * rowDelay
@@ -823,7 +795,6 @@ class Wall(object):
     
 
     #print (getDelay.__name__, round(dRandom.r, 3), dRandom.groupSize)
-    #delayXX = 0
     
     for row in range(Wall.numRows):
       for col in range(numCols):
@@ -833,7 +804,6 @@ class Wall(object):
           colGroupDelay = Wall.targetRenderDuration / dRandom.groupSize
           #dRandom.staggerDelay = (dRandom.r * colGroupDelay * dRandom.columns * (col % dRandom.columns))
         brick.delayShowBrick(getDelay())
-        #delayXX += dRandom.r*0.04 * 1000
     return len(game.bricks)
 
   
@@ -857,6 +827,22 @@ class Wall(object):
       delay = duration * (maxDistance - distance) / maxDistance 
       brick.delayGlow(delay)
       pass
+
+  @staticmethod
+  def brickExplosion(deadBrick):
+    duration = 0.2 * 1000
+    topLeftBrick = (Brick.width/2, Wall.topGap+Brick.height/2)
+    bottomRightBrick = (Wall.getNumCols() * Brick.width, Wall.numRows* Brick.height+Wall.topGap)
+    target = (deadBrick.rect.center)
+    maxDistance = Wall.distance(topLeftBrick,  bottomRightBrick)
+    maxDistance = Wall.numRows* Brick.height + 25
+    for brick in game.bricks:
+      distance = Wall.distance(brick.rect.center,  target)
+      if (distance < maxDistance):
+        delay = duration - (duration * (maxDistance - distance) / maxDistance)
+        brick.delayGlow(delay)
+      pass
+
 
   @staticmethod
   def distance(p1, p2):
@@ -893,7 +879,7 @@ class PowerUps():
   def setSpawnFactors():
     # debug set:
     PUpWiderPaddle.spawnRate=0.50
-    PUpMultiBall.spawnRate=2
+    PUpMultiBall.spawnRate=20
     PUpExtraLife.spawnRate=0.1
     PUpSlowMo.spawnRate=0.30
     PUpFireBall.spawnRate=0.4
@@ -904,12 +890,12 @@ class PowerUps():
 
     # game-balanced set:
     PUpWiderPaddle.spawnRate=50
-    PUpMultiBall.spawnRate=0.2
+    #PUpMultiBall.spawnRate=0.2
     PUpExtraLife.spawnRate=0.1
-    PUpSlowMo.spawnRate=30
+    #PUpSlowMo.spawnRate=30
     PUpFireBall.spawnRate=0.4
     PUpInvinciBalls.spawnRate=0.4
-    PUpBigBall.spawnRate=10
+    #PUpBigBall.spawnRate=10
     PUpHighBall.spawnRate=0.4
     noPowerup = 30
 
@@ -962,13 +948,11 @@ class PowerUps():
     pass
 
 class PowerUp(pygame.sprite.Sprite):
-#  size = 8
   width = Brick.width
   height = 2 * Brick.height
 
   deathDelay = 2.5 * 1000
 
-  #def __init__(self, brick):
   def __init__(self, x, y):
     super().__init__()
     self.image = pygame.Surface([PowerUp.width, PowerUp.height])
@@ -1240,6 +1224,12 @@ class PUpHighBall(PowerUp):
   def getMissedEventName(self):
      return "HighBallMissed"
 
-    
-game=Game()
-game.run()
+def play(idUser=None):
+  global game
+  game=Game(idUser)
+  game.run()
+
+if __name__ == '__main__':
+  play()
+  pygame.quit()
+  sys.exit()
