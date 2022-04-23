@@ -149,3 +149,74 @@ GROUP BY e.idEventType;
     sql="UPDATE Config SET SettingValue = (?) WHERE Setting=(?)"
     cur.execute(sql, (value, setting))
     self.conn.commit()
+
+  # Remove all users and game info from database, shrink db.
+  # BE CAREFUL WITH THIS.  Consider making a copy of BreakO.db
+  # if it is not too large already.
+  # Note that NEITHER EventTypes table nor Config table is deleted or rebuilt
+  def restartDb (self):
+    cur = self.conn.cursor()
+    cur.execute("DROP TABLE Events;")
+    cur.execute("DROP TABLE Levels;")
+    cur.execute("DROP TABLE Games;")
+    cur.execute("""DROP TABLE Sessions;""")
+    cur.execute("""DROP TABLE Users;""")
+
+    cur.execute("""
+CREATE TABLE Users
+(
+  idUser INTEGER NOT NULL ,
+  Name   TEXT    NULL,
+  Visible BOOLEAN NULL     DEFAULT 1 ,
+  PRIMARY KEY (idUser)
+);""")
+    cur.execute("""CREATE TABLE Sessions
+(
+  idSession    INTEGER   NOT NULL ,
+  idUser       INTEGER   NOT NULL ,
+  sessionStart TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP  ,
+  sessionEnd   TIMESTAMP NULL     ,
+  PRIMARY KEY (idSession) ,
+  FOREIGN KEY (idUser) REFERENCES Users (idUser)
+);""")
+    cur.execute("""
+CREATE TABLE Games
+(
+  idGame    INTEGER   NOT NULL ,
+  idSession INTEGER   NOT NULL ,
+  gameStart TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP  ,
+  gameEnd   TIMESTAMP NULL      ,
+  levelReached INTEGER  ,
+  endTrigger INTEGER ,
+  PRIMARY KEY (idGame) ,
+  FOREIGN KEY (endTrigger) REFERENCES EventTypes (idEventType) ,
+  FOREIGN KEY (idSession) REFERENCES Sessions (idSession)
+);""")
+    cur.execute("""
+CREATE TABLE Levels
+(
+  idLevel        INTEGER   NOT NULL ,
+  idGame         INTEGER   NOT NULL ,
+  levelStart     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP  ,
+  levelEnd       TIMESTAMP NULL     ,
+  levelNumber    INTEGER   NOT NULL ,
+  maxBallsInPlay INTEGER   NULL     ,
+  pauseDuration  INTEGER   NULL     ,
+  PRIMARY KEY (idLevel) ,
+  FOREIGN KEY (idGame) REFERENCES Games (idGame)
+);""")
+    cur.execute("""
+CREATE TABLE Events
+(
+  idEvent     INTEGER   NOT NULL ,
+  idEventType INTEGER   NOT NULL ,
+  idLevel     INTEGER   NOT NULL ,
+  time        TIMESTAMP NULL     DEFAULT CURRENT_TIMESTAMP  ,
+  PRIMARY KEY (idEvent) ,
+  FOREIGN KEY (idEventType) REFERENCES EventTypes (idEventType) ,
+  FOREIGN KEY (idLevel) REFERENCES Levels (idLevel)
+);""")
+    cur.execute("""INSERT INTO Users (Name) VALUES ('Guest');""")
+    cur.execute("""UPDATE Config SET SettingValue = ('1') WHERE Setting='lastIdUser'""")
+    self.conn.commit()
+    cur.execute("VACUUM")  

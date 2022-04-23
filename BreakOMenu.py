@@ -5,7 +5,7 @@ try:
   pygame_menuExists = True
 except ImportError:
   pygame_menuExists = False 
-  print("Install pygame_menu to view menus, change users, etc.")
+  print("Install pygame_menu to view menus, change users, etc.\n")
 
 import breakout, breakodb
 
@@ -84,7 +84,7 @@ class BreakOMenu():
     if idUser==0:       # check for new user
       idUser=self.db.insertUser(self.newUser.get_value())
     self.db.setConfigValue("lastIdUser", idUser)
-    breakout.play(idUser)
+    breakout.Game.play(idUser)
     self.showMenu()
 
   def showMenu(self):
@@ -93,4 +93,4 @@ class BreakOMenu():
 if pygame_menuExists:
   BreakOMenu()
 else:
-  breakout.play()
+  breakout.Game.play()

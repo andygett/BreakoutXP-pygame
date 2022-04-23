@@ -1,11 +1,11 @@
 {
   "canvas": {
-    "version": "2.2.1",
+    "version": "2.2.11",
     "width": 2000,
     "height": 2000,
-    "scrollTop": -100,
+    "scrollTop": -38,
     "scrollLeft": 0,
-    "zoomLevel": 1,
+    "zoomLevel": 0.9,
     "show": {
       "tableComment": true,
       "columnComment": true,
@@ -19,7 +19,7 @@
     },
     "database": "SQLite",
     "databaseName": "breakOut",
-    "canvasType": "ERD",
+    "canvasType": "@vuerd/builtin-sql-ddl",
     "language": "GraphQL",
     "tableCase": "pascalCase",
     "columnCase": "camelCase",
@@ -27,6 +27,7 @@
     "bracketType": "none",
     "setting": {
       "relationshipDataTypeSync": true,
+      "relationshipOptimization": false,
       "columnOrder": [
         "columnName",
         "columnDataType",
@@ -36,7 +37,8 @@
         "columnDefault",
         "columnComment"
       ]
-    }
+    },
+    "pluginSerializationMap": {}
   },
   "table": {
     "tables": [
